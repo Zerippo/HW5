@@ -245,13 +245,46 @@ public class CuckooHash<K, V> {
 	 */
 
  	public void put(K key, V value) {
+    int pos1 = hash1(key);
+    int pos2 = hash2(key);
 
-		// ADD YOUR CODE HERE - DO NOT FORGET TO ADD YOUR NAME AT TOP OF FILE.
-		// Also make sure you read this method's prologue above, it should help
-		// you. Especially the two HINTS in the prologue.
+    // Check if the (key, value) pair already exists
+    if ((table[pos1] != null && table[pos1].getBucKey().equals(key) && table[pos1].getValue().equals(value)) ||
+        (table[pos2] != null && table[pos2].getBucKey().equals(key) && table[pos2].getValue().equals(value))) {
+        return; // Duplicate key-value pair, do nothing
+    }
 
-		return;
-	}
+    Bucket<K, V> newEntry = new Bucket<>(key, value);
+
+    for (int i = 0; i < CAPACITY; i++) { // Prevent infinite loops
+        // Try to insert at h1 position
+        if (table[pos1] == null) {
+            table[pos1] = newEntry;
+            return;
+        }
+
+        // Swap out existing entry and move it
+        Bucket<K, V> evicted = table[pos1];
+        table[pos1] = newEntry;
+
+        // Determine new position for evicted key
+        key = evicted.getBucKey();
+        value = evicted.getValue();
+        newEntry = evicted;
+        pos1 = (hash1(key) == pos1) ? hash2(key) : hash1(key); // Switch to alternate position
+
+        // If alternate position is empty, insert and return
+        if (table[pos1] == null) {
+            table[pos1] = newEntry;
+            return;
+        }
+    }
+
+    // If we reach here, a cycle is detected, trigger rehash and retry insertion
+    rehash();
+    put(key, value);
+}
+
 
 
 	/**
